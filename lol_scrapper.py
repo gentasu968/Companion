@@ -1,25 +1,23 @@
 import requests
 from bs4 import BeautifulSoup
 import webbrowser
+import json
 
 
-# css class for mobalytics matchups page
-MATCHUP_CLASS = 'm-jnzqnj'  # Parent Class
-GD_CLASS = 'm-1wyf6ef'  # Child Class
-CHAMP_NAME_CLASS = 'm-1fvxu1d'  # Child Class
-PAGE = 'https://app.mobalytics.gg'
-
-
-def main(champPool):
+def main(configs):
     allMatchUps = {}
     opponent = input("Enemy Champion: ").capitalize()
+    webDomain = configs["webDomain"]
+    champPool = configs["champPool"]
+    matchupClass = configs["matchupClass"] # Parent Class
+
 
     for champ in champPool:
-        link = f"{PAGE}/lol/champions/{champ}/counters"
+        link = f"{webDomain}/lol/champions/{champ}/counters"
         page = requests.get(link)
         soup = BeautifulSoup(page.text, 'html.parser')  # Get HTML content
-        match_ups = soup.find_all(class_=MATCHUP_CLASS)
-        champStats = getStats(match_ups)
+        match_ups = soup.find_all(class_=matchupClass)
+        champStats = getStats(match_ups, configs)
         allMatchUps[champ] = champStats
 
     bestPick = getMatchUp(allMatchUps, opponent)
@@ -27,12 +25,14 @@ def main(champPool):
 
 
 # Returns a dictionary of matchups for a champion
-def getStats(match_ups):
+def getStats(match_ups, configs):
+    champNameClass = configs["champNameClass"] # Child Class
+    gdClass = configs["gdClass"] # Child Class
     champMatchUps = {}
     for match_up in match_ups:
         for child in match_up.contents:
-            champNameHtml = child.find_all(class_=CHAMP_NAME_CLASS)
-            champStatsHtml = child.find_all(class_=GD_CLASS)
+            champNameHtml = child.find_all(class_=champNameClass)
+            champStatsHtml = child.find_all(class_=gdClass)
             champName = champNameHtml[0].get_text()
             champMatchUps[champName] = {
                 "GD@15": champStatsHtml[0].get_text(),
@@ -84,8 +84,8 @@ def parseStr(string):
         return float(string[:-1])
 
 
-alexPool = ["akali", "kassadin", "anivia", "ahri"]
-trucPool = ["nunu", "drmundo", "nocturne"]
-
 if __name__ == "__main__":
-    main(alexPool)
+    config_file = input("Config File:")
+    with open(config_file, "r") as cfg:
+        configs = json.load(cfg)
+        main(configs)
