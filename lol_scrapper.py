@@ -1,7 +1,7 @@
 import requests
-from bs4 import BeautifulSoup
 import webbrowser
 import json
+from bs4 import BeautifulSoup
 
 
 def main(configs):
@@ -9,25 +9,24 @@ def main(configs):
     opponent = input("Enemy Champion: ").capitalize()
     webDomain = configs["webDomain"]
     champPool = configs["champPool"]
-    matchupClass = configs["matchupClass"] # Parent Class
-
+    matchupClass = configs["matchupClass"]  # Parent Class
 
     for champ in champPool:
         link = f"{webDomain}/lol/champions/{champ}/counters"
         page = requests.get(link)
-        soup = BeautifulSoup(page.text, 'html.parser')  # Get HTML content
+        soup = BeautifulSoup(page.text, "html.parser")  # Get HTML content
         match_ups = soup.find_all(class_=matchupClass)
         champStats = getStats(match_ups, configs)
         allMatchUps[champ] = champStats
 
-    bestPick = getMatchUp(allMatchUps, opponent)
-    return print(f'-------- {bestPick} is the best pick --------')
+    bestPick = getMatchUp(allMatchUps, opponent, configs)
+    return print(f"-------- {bestPick} is the best pick --------")
 
 
 # Returns a dictionary of matchups for a champion
 def getStats(match_ups, configs):
-    champNameClass = configs["champNameClass"] # Child Class
-    gdClass = configs["gdClass"] # Child Class
+    champNameClass = configs["champNameClass"]  # Child Class
+    gdClass = configs["gdClass"]  # Child Class
     champMatchUps = {}
     for match_up in match_ups:
         for child in match_up.contents:
@@ -37,14 +36,14 @@ def getStats(match_ups, configs):
             champMatchUps[champName] = {
                 "GD@15": champStatsHtml[0].get_text(),
                 "winRate": champStatsHtml[1].get_text(),
-                "link": child.get('href')
+                "link": child.get("href"),
             }
     return champMatchUps
 
 
 # Returns best pick from the matchup stats for each champ in the pool for @opponent
 # Opens mobalytics matchup page if there is an optimal pick
-def getMatchUp(allMatchUps, opponent):
+def getMatchUp(allMatchUps, opponent, configs):
     bestGD = {"key": "filler", "value": 0}
     bestWR = {"key": "filler", "value": 0}
     for champ, stats in allMatchUps.items():
@@ -58,9 +57,9 @@ def getMatchUp(allMatchUps, opponent):
         else:
             matchUpGD = parseStr(opStats["GD@15"])
             matchUpWR = parseStr(opStats["winRate"])
-            if (matchUpGD > bestGD["value"]):
+            if matchUpGD > bestGD["value"]:
                 bestGD = {"key": champ, "value": matchUpGD}
-            if (matchUpWR > bestWR["value"]):
+            if matchUpWR > bestWR["value"]:
                 bestWR = {"key": champ, "value": matchUpWR}
         print(
             champ.ljust(15, " ").capitalize(),
@@ -69,18 +68,21 @@ def getMatchUp(allMatchUps, opponent):
             opStats.get("GD@15").ljust(10, " "),
             "|",
             "WinRate:",
-            opStats.get("winRate").ljust(10, " "))
+            opStats.get("winRate").ljust(10, " "),
+        )
 
-    if (bestGD.get("key") == bestWR.get("key")):
-        matchUpPage = PAGE+allMatchUps[bestGD["key"]][opponent].get("link")
+    if bestGD.get("key") == bestWR.get("key"):
+        matchUpPage = configs["webDomain"] + allMatchUps[bestGD["key"]][opponent].get(
+            "link"
+        )
         webbrowser.open(matchUpPage)
         return bestGD.get("key").capitalize()
 
 
 def parseStr(string):
-    if (string[0] == "+" or string[0] == "-"):
+    if string[0] == "+" or string[0] == "-":
         return float(string[1:])
-    elif (string[-1] == "%"):
+    elif string[-1] == "%":
         return float(string[:-1])
 
 
